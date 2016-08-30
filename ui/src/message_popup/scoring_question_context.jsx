@@ -36,7 +36,7 @@ export default React.createClass({
           <CardText
             expandable={true}>
               <div>
-                <div style={{paddingBottom: 20}}>{question.text}</div>
+                {this.renderQuestion(question)}
                 {question.students && question.students.map(student => <StudentCard useCardStyles={true} key={`student-${student.id}`} student={student} />)}
               </div>
           </CardText>
@@ -61,5 +61,25 @@ export default React.createClass({
             examples={question.nonExamples} />}
       </div>
     );
+  },
+
+  renderQuestion(question) {
+    if (question.text) return <div style={{paddingBottom: 20}}>{question.text}</div>;
+    if (question.youTubeId) {
+      const url = `https://img.youtube.com/vi/${question.youTubeId}/0.jpg`;
+      return (
+        <div style={styles.videoContainer}>
+          <img src={url} height={180} width="auto" />
+        </div>
+      );
+    }
   }
 });
+
+const styles = {
+  videoContainer: {
+    width: '100%',
+    background: 'black',
+    textAlign: 'center'
+  }
+};

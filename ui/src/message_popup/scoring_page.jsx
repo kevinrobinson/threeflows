@@ -4,7 +4,6 @@ import React from 'react';
 import VelocityTransitionGroup from "velocity-react/velocity-transition-group";
 import 'velocity-animate/velocity.ui';
 
-
 import Divider from 'material-ui/Divider';
 import NavigationAppBar from '../components/navigation_app_bar.jsx';
 import Paper from 'material-ui/Paper';
@@ -14,6 +13,7 @@ import {List, ListItem} from 'material-ui/List';
 import ScoringSwipe from './scoring_swipe.jsx';
 import {withIndicator} from './transformations.jsx';
 import {questionId} from './question.js';
+import VideoThumbnail from './renderers/video_thumbnail.jsx';
 import * as Api from '../helpers/api.js';
 
 
@@ -55,14 +55,20 @@ export default React.createClass({
     // Show only solution mode responses, and those that haven't been translated to evidence
     // or dismissed.
     const logIds = evaluations.map(evaluation => evaluation.json.logId);
+    // debugger
     return logs.filter((log) => {
-      if (log.type !== 'message_popup_response') return false;
+      const hasEvaluation = logIds.indexOf(log.id) !== -1;
+      if (hasEvaluation) return false;
       if (log.json.helpType === 'none') return false;
-      if (logIds.indexOf(log.id) !== -1) return false;
-      return true;
+
+      if (log.type === 'message_popup_response') return true;
+      if (log.type === 'message_popup_audio_response' ) return true;
+      
+      return false;
     });
   },
 
+  // TODO(kr)
   computeSelectedLogs(logs, selectedQuestion) {
     return logs.filter(log => log.json.question.text === selectedQuestion.text);
   },
@@ -123,8 +129,10 @@ export default React.createClass({
         <List>
           {questionGroups.map(({logsForQuestion, questionKey}) => {
             const question = _.first(logsForQuestion).json.question;
-            const {indicator} = withIndicator(question);            
-            return this.renderQuestion({
+            const {indicator} = withIndicator(question);
+            console.log('question', question);
+            console.log('indicator', indicator);
+            return this.renderScenario({
               questionKey,
               question,
               indicator,
@@ -136,7 +144,13 @@ export default React.createClass({
     );
   },
 
-  renderQuestion({questionKey, question, indicator, logsForQuestion}) {
+  renderScenario(params) {
+    const {question} = params;
+    if (question.text) return this.renderTextScenario(params);
+    if (question.youTubeId) return this.renderVideoScenario(params);
+  },
+
+  renderTextScenario({questionKey, question, indicator, logsForQuestion}) {
     return (
       <div key={questionKey}>
         <ListItem
@@ -156,6 +170,19 @@ export default React.createClass({
     );
   },
 
+  renderVideoScenario({questionKey, question, indicator, logsForQuestion}) {
+    const url = `https://img.youtube.com/vi/${question.youTubeId}/0.jpg`;
+    return (
+      <div
+        key={questionKey}
+        style={styles.videoContainer}
+        onClick={this.onQuestionSelected.bind(this, question)}
+      >
+        <img src={url} height={180} width="auto" />;
+      </div>
+    );
+  },
+
   renderSwipeableList(question, logsForQuestion) {
     const {indicator} = withIndicator(question);
 
@@ -170,3 +197,12 @@ export default React.createClass({
     );
   }
 });
+
+const styles = {
+  videoContainer: {
+    width: '100%',
+    background: 'black',
+    textAlign: 'center',
+    cursor: 'pointer'
+  }
+};

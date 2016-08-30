@@ -23,13 +23,33 @@ export default React.createClass({
     return (
       <Card key="competency" style={style}>
         <CardText style={{fontSize: 16}}>
-          <div>
-            <div>{log.json.initialResponseText}</div>
-            <div style={styles.responseLatency}>{`${Math.round(log.json.elapsedMs/1000)} seconds`}</div>
-          </div>
+          {this.renderResponseContent(log)}
         </CardText>
       </Card>
     );
+  },
+
+  renderResponseContent(log) {
+    const {elapsedMs, initialResponseText, audioUrl} = log.json;
+
+    if (initialResponseText) {
+      return (
+        <div>
+          <div>{initialResponseText}</div>
+          <div style={styles.responseLatency}>{`${Math.round(elapsedMs/1000)} seconds`}</div>
+        </div>
+      );
+    }
+
+    // TODO(kr) uploadedUrl
+    if (audioUrl.uploadedUrl) {
+      return (
+        <div>
+          <div><audio controls={true} src={audioUrl.uploadedUrl} /></div>
+          <div style={styles.responseLatency}>{`${Math.round(elapsedMs/1000)} seconds`}</div>
+        </div>
+      );
+    }
   }
 });
 
