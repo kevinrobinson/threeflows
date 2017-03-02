@@ -3,7 +3,16 @@ import encodeWAV from './encode_wav.js';
 
 // Audio recorder class for one-time use recording.  Only works on Chrome and Firefox.
 // Adapted from https://github.com/danrouse/react-audio-recorder
+// States are:
+//    creating
+//   *ready*
+//    acquiring
+//   *recording*
+//    encoding
+//    resetting
+//   *error*
 export default class AudioRecorder {
+  state: string;
   buffers: ?[[number]];
   bufferLength: number;
   bufferSize: number;
@@ -14,23 +23,46 @@ export default class AudioRecorder {
   getUserMedia: ?Object;
 
   constructor() {
-    this.buffers = [[], []];
-    this.bufferLength = 0;
+    this.state = 'creating';
     this.bufferSize = 4096; // tuned up since we care about throughput and capturing all frames, not latency
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    this.sampleRate = this.audioContext.sampleRate;
-    this.recordingStream = null;
     this.getUserMedia = (window.navigator.getUserMedia ||
                          window.navigator.webkitGetUserMedia ||
                          window.navigator.mozGetUserMedia ||
                          window.navigator.msGetUserMedia).bind(window.navigator);
+    this._toReady();
+  }
+
+  _toReady() {
+    this.state = 'resetting';
+
+    // recordingStream
+    if (this.recordingStream && this.recordingStream.stop) this.recordingStream.stop();
+
+    // audioContext
+    if (this.audioContext && this.audioContext.close) this.audioContext.close();
+    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this.sampleRate = this.audioContext.sampleRate;
+
+    // processor
+    if (this.processor) delete this.processor;
+
+    
+    this.buffers = [[], []];
+    this.bufferLength = 0;
+    
+    
+    this.recordingStream = null;
+    
+    this.state = 'ready';
   }
 
   record() {
+    this.state = 'acquiring';
     this.getUserMedia({ audio: true }, this._onStreamReady.bind(this), this._onStreamError.bind(this));
   }
 
   _onStreamError(err) {
+    this.state = 'error';
     console.error('AudioRecorder._onStreamError', err); // eslint-disable-line no-console
   }
 
@@ -47,6 +79,7 @@ export default class AudioRecorder {
 
     this.processor = processor;
     this.recordingStream = stream;
+    this.state = 'recording';
   }
 
   _onAudioProcess(event) {
@@ -64,24 +97,20 @@ export default class AudioRecorder {
     // Guard for if the various stages of initialization aren't completed yet
     if (!this.processor) return;
     if (!this.recordingStream) return;
-    const audioTracks = this.recordingStream.getTracks();
-    if (audioTracks.length === 0) return;
 
-    // Stop actively recording, encode the data and pass it back
-    audioTracks[0].stop();
+    this.state = 'stopping';
+    this._stopTracks();
+
+    this.state = 'encoding';
     const audioData = encodeWAV(this.buffers, this.bufferLength, this.sampleRate);
     onBlobReady(audioData);
+
+    this._toReady();
   }
 
-  destroy() {
-    if (this.recordingStream.stop) this.recordingStream.stop();
-    if (this.audioContext.close) this.audioContext.close();
-
-    delete this.processor;
-    delete this.buffers;
-    delete this.bufferLength;
-    delete this.bufferSize;
-    delete this.audioContext;
-    delete this.recordingStream;
+  _stopTracks() {
+    if (!this.this.recordingStream) return;
+    const audioTracks = this.recordingStream.getTracks();
+    audioTracks.forEach(audioTrack => audioTrack.stop());
   }
 }
