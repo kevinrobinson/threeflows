@@ -144,7 +144,7 @@ Lisa looks away, visibly angry.
     slides.push({ text: 'Disrespect Towards Teachers:'});
     
     slides = slides.concat(teacherDisrespect.map(addInAppleSceneNumber));
-    
+
   }
 
 
@@ -165,6 +165,12 @@ Lisa looks away, visibly angry.
 
     slides = slides.concat(scenes.map(addInAppleSceneNumber));
   }
+
+
+  slides.push({ text: `Pause:
+
+If you’ve finished early, wait for your whole group to finish before proceeding to group discussion.`});
+
 
   return slides;
 }
